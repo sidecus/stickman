@@ -1,0 +1,32 @@
+# Stickman Siege Prototype
+
+This repository contains a dependency-free browser prototype for the stickman base battle.
+
+## Run
+
+Option 1:
+
+- Open `/Users/zhezhu/repos/stickman/index.html` directly in a browser.
+
+Option 2:
+
+- From `/Users/zhezhu/repos/stickman`, run `python3 -m http.server 8000`
+- Open `http://localhost:8000`
+
+## Controls
+
+- Click a unit card to deploy
+- Press `1` for Fighter
+- Press `2` for Archer
+- Press `3` for Shield
+- Press `4` for Giant
+- Press `R` to restart after a match ends
+
+## Included in this prototype
+
+- Blue player vs red AI
+- Two mirrored routes with automatic route choice
+- Passive income, gold costs, cooldowns, and 20-unit field cap
+- Four unit types with distinct combat roles
+- Base destruction win condition
+- Battle HUD, end-of-match summary, and basic generated sound effects

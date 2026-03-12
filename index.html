@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stickman Siege Prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="title-bar">
+        <div>
+          <p class="eyebrow">Playable prototype</p>
+          <h1>Stickman Siege</h1>
+        </div>
+        <p class="subtitle">
+          Blue team vs red team. Build pressure, control the field, break the base.
+        </p>
+      </section>
+
+      <section class="game-shell">
+        <div class="hud-row">
+          <div class="hud-card" id="redStatus"></div>
+          <div class="hud-card hud-card-center" id="centerStatus"></div>
+          <div class="hud-card" id="blueStatus"></div>
+        </div>
+
+        <div class="battle-layout">
+          <div class="canvas-frame">
+            <canvas
+              id="gameCanvas"
+              width="1280"
+              height="720"
+              aria-label="Stickman battle arena"
+            ></canvas>
+            <div class="message-banner" id="messageBanner">
+              Click a unit card or press 1-4 to deploy. First input also unlocks sound.
+            </div>
+          </div>
+
+          <aside class="side-panel">
+            <p class="eyebrow">Recruit</p>
+            <div class="unit-panel" id="unitPanel"></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <section class="overlay hidden" id="overlay">
+      <div class="overlay-card">
+        <p class="eyebrow">Battle report</p>
+        <h2 id="overlayTitle"></h2>
+        <p class="overlay-subtitle" id="overlaySubtitle"></p>
+        <div class="summary-grid" id="summaryGrid"></div>
+        <button class="restart-button" id="restartButton">Restart Match</button>
+      </div>
+    </section>
+
+    <script type="module" src="game.js"></script>
+  </body>
+</html>
