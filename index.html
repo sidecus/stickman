@@ -3,18 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stickman Siege Prototype</title>
+    <title>想想的火柴人战争</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="app-shell">
       <section class="title-bar">
         <div>
-          <p class="eyebrow">Playable prototype</p>
-          <h1>Stickman Siege</h1>
+          <p class="eyebrow">可玩原型</p>
+          <h1>想想的火柴人战争</h1>
         </div>
         <p class="subtitle">
-          Blue team vs red team. Build pressure, control the field, break the base.
+          蓝队对红队。建立压力，控制战场，摧毁基地。
         </p>
       </section>
 
@@ -34,12 +34,12 @@
               aria-label="Stickman battle arena"
             ></canvas>
             <div class="message-banner" id="messageBanner">
-              Click a unit card or press 1-4 to deploy. First input also unlocks sound.
+              点击单位卡片或按 1-4 部署。首次输入也会解锁声音。
             </div>
           </div>
 
           <aside class="side-panel">
-            <p class="eyebrow">Recruit</p>
+            <p class="eyebrow">招募</p>
             <div class="unit-panel" id="unitPanel"></div>
           </aside>
         </div>
@@ -48,11 +48,11 @@
 
     <section class="overlay hidden" id="overlay">
       <div class="overlay-card">
-        <p class="eyebrow">Battle report</p>
+        <p class="eyebrow">战报</p>
         <h2 id="overlayTitle"></h2>
         <p class="overlay-subtitle" id="overlaySubtitle"></p>
         <div class="summary-grid" id="summaryGrid"></div>
-        <button class="restart-button" id="restartButton">Restart Match</button>
+        <button class="restart-button" id="restartButton">重新开始比赛</button>
       </div>
     </section>
 

@@ -8,7 +8,7 @@ const UNIT_TYPES = {
     cost: 50,
     cooldown: 1.4,
     maxHealth: 120,
-    damage: 14,
+    damage: 12,
     speed: 46,
     range: 24,
     aggroRange: 110,
@@ -23,7 +23,7 @@ const UNIT_TYPES = {
     cost: 80,
     cooldown: 2.6,
     maxHealth: 72,
-    damage: 16,
+    damage: 14,
     speed: 44,
     range: 196,
     aggroRange: 230,
@@ -39,7 +39,7 @@ const UNIT_TYPES = {
     cost: 95,
     cooldown: 3.4,
     maxHealth: 250,
-    damage: 12,
+    damage: 10,
     speed: 38,
     range: 24,
     aggroRange: 102,
@@ -54,7 +54,7 @@ const UNIT_TYPES = {
     cost: 190,
     cooldown: 7.2,
     maxHealth: 430,
-    damage: 42,
+    damage: 36,
     speed: 28,
     range: 30,
     aggroRange: 120,
@@ -164,7 +164,7 @@ const PLATFORM_SEGMENTS = [
 ];
 
 const BASE_MAX_HEALTH = 1000;
-const STARTING_GOLD = 50;
+const STARTING_GOLD = 1000;
 const GOLD_PER_SECOND = 4;
 const UNIT_CAP = 20;
 
@@ -748,7 +748,7 @@ class Game {
       return false;
     }
 
-    const lane = this.chooseLane(teamId, typeId);
+    const lane = this.chooseRandomLane();
     const route = ROUTES[teamId][lane].map((point) => ({ x: point.x, y: point.y }));
     const spawnPoint = route[0];
     const newUnit = {
@@ -790,55 +790,9 @@ class Game {
     return true;
   }
 
-  chooseLane(teamId, typeId) {
-    const enemyTeamId = TEAMS[teamId].enemy;
-    let bestLane = LANE_ORDER[0];
-    let bestScore = -Infinity;
-
-    for (const lane of LANE_ORDER) {
-      const allyUnits = this.units.filter(
-        (unit) => unit.alive && unit.teamId === teamId && unit.lane === lane,
-      );
-      const enemyUnits = this.units.filter(
-        (unit) => unit.alive && unit.teamId === enemyTeamId && unit.lane === lane,
-      );
-      const enemyArchers = enemyUnits.filter((unit) => unit.typeId === "archer").length;
-      const nearbyThreat = this.units.filter((unit) => {
-        if (!unit.alive || unit.teamId !== enemyTeamId) {
-          return false;
-        }
-        if (teamId === "red") {
-          return unit.x < 380;
-        }
-        return unit.x > 900;
-      }).length;
-
-      let score = 10 - enemyUnits.length * 1.35 - allyUnits.length * 0.55;
-      score += Math.random() * 0.7;
-      score += nearbyThreat * 0.18;
-
-      if (typeId === "archer") {
-        const friendlyFrontline = allyUnits.filter(
-          (unit) => unit.typeId === "fighter" || unit.typeId === "shield",
-        ).length;
-        score += friendlyFrontline * 0.3;
-      }
-
-      if (typeId === "giant") {
-        score -= enemyArchers * 0.28;
-      }
-
-      if (enemyUnits.length === 0) {
-        score += 0.55;
-      }
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestLane = lane;
-      }
-    }
-
-    return bestLane;
+  chooseRandomLane() {
+    const laneIndex = Math.floor(Math.random() * LANE_ORDER.length);
+    return LANE_ORDER[laneIndex];
   }
 
   updateUnits(delta) {
@@ -1136,26 +1090,31 @@ class Game {
 
       for (let j = i + 1; j < this.units.length; j += 1) {
         const b = this.units[j];
-        if (!b.alive) {
+        if (!b.alive || a.teamId === b.teamId) {
           continue;
         }
 
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const distance = Math.hypot(dx, dy);
-        const minimumDistance = a.radius * 0.75 + b.radius * 0.75;
+        const minimumDistance = a.radius * 0.72 + b.radius * 0.72;
 
-        if (distance === 0 || distance >= minimumDistance) {
+        if (distance >= minimumDistance) {
           continue;
         }
 
-        const overlap = (minimumDistance - distance) / 2;
-        const nx = dx / distance;
-        const ny = dy / distance;
+        const safeDistance = Math.max(distance, 0.001);
+        const overlap = (minimumDistance - safeDistance) / 2;
+        const nx = distance < 0.001 ? (TEAMS[a.teamId].direction > 0 ? 1 : -1) : dx / safeDistance;
+        const ny = distance < 0.001 ? jitter(a.id + b.id, 0.16) : dy / safeDistance;
         a.x -= nx * overlap;
-        a.y -= ny * overlap * 0.4;
+        a.y -= ny * overlap * 0.35;
         b.x += nx * overlap;
-        b.y += ny * overlap * 0.4;
+        b.y += ny * overlap * 0.35;
+        a.x = clamp(a.x, 40, MAP.width - 40);
+        a.y = clamp(a.y, 120, MAP.height - 80);
+        b.x = clamp(b.x, 40, MAP.width - 40);
+        b.y = clamp(b.y, 120, MAP.height - 80);
       }
     }
   }
