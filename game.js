@@ -1,4 +1,14 @@
 const UNIT_ORDER = ["fighter", "archer", "shield", "giant"];
+const LANE_NAMES = {
+  top: "Upper route",
+  bottom: "Lower route",
+};
+const AI_FOCUS_LABELS = {
+  balanced: "Balanced",
+  brace: "Brace",
+  volley: "Volley",
+  power: "Power push",
+};
 
 const UNIT_TYPES = {
   fighter: {
@@ -15,6 +25,9 @@ const UNIT_TYPES = {
     attackInterval: 0.75,
     radius: 13,
     description: "Cheap, balanced frontliner.",
+    goodAgainst: "archers and exposed lanes",
+    strugglesAgainst: "shields and giant walls",
+    weight: 1,
   },
   archer: {
     id: "archer",
@@ -31,6 +44,9 @@ const UNIT_TYPES = {
     projectileSpeed: 420,
     radius: 12,
     description: "Long range damage from behind the line.",
+    goodAgainst: "giants and stalled lanes",
+    strugglesAgainst: "fighters reaching the backline",
+    weight: 1.15,
   },
   shield: {
     id: "shield",
@@ -46,6 +62,9 @@ const UNIT_TYPES = {
     attackInterval: 0.9,
     radius: 16,
     description: "High health, low damage melee tank.",
+    goodAgainst: "archers and holding pressure",
+    strugglesAgainst: "giants and slow pushes",
+    weight: 1.35,
   },
   giant: {
     id: "giant",
@@ -61,6 +80,9 @@ const UNIT_TYPES = {
     attackInterval: 1.45,
     radius: 24,
     description: "Slow, huge, and dangerous into anything.",
+    goodAgainst: "bases and tank lines",
+    strugglesAgainst: "focused archers",
+    weight: 2.4,
   },
 };
 
@@ -164,8 +186,8 @@ const PLATFORM_SEGMENTS = [
 ];
 
 const BASE_MAX_HEALTH = 1000;
-const STARTING_GOLD = 1000;
-const GOLD_PER_SECOND = 4;
+const STARTING_GOLD = 280;
+const GOLD_PER_SECOND = 11;
 const UNIT_CAP = 20;
 
 function clamp(value, min, max) {
@@ -196,6 +218,65 @@ function withAlpha(hexColor, alpha) {
   const green = (number >> 8) & 255;
   const blue = number & 255;
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function getUnitIconMarkup(typeId) {
+  if (typeId === "fighter") {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" stroke-width="1.8">
+        <circle cx="8" cy="5.5" r="2.7"></circle>
+        <path d="M8 8.5L8 15.5"></path>
+        <path d="M8 10.5L13 8"></path>
+        <path d="M8 11L4 13.5"></path>
+        <path d="M8 15.5L5 20"></path>
+        <path d="M8 15.5L11 20"></path>
+        <path d="M13.2 8L18.8 4.8"></path>
+      </svg>
+    `;
+  }
+
+  if (typeId === "archer") {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" stroke-width="1.8">
+        <circle cx="8" cy="5.5" r="2.7"></circle>
+        <path d="M8 8.5L8 15.5"></path>
+        <path d="M8 10.5L13.5 9"></path>
+        <path d="M8 11L4 13.5"></path>
+        <path d="M8 15.5L5 20"></path>
+        <path d="M8 15.5L11 20"></path>
+        <path d="M15 6.5C18.5 8.5 18.5 15.5 15 17.5"></path>
+        <path d="M15 6.5L15 17.5"></path>
+        <path d="M12.8 12L18.8 12"></path>
+      </svg>
+    `;
+  }
+
+  if (typeId === "shield") {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" stroke-width="1.8">
+        <circle cx="8" cy="5.5" r="2.7"></circle>
+        <path d="M8 8.5L8 15.5"></path>
+        <path d="M8 10.5L12 11"></path>
+        <path d="M8 11L4 13.5"></path>
+        <path d="M8 15.5L5 20"></path>
+        <path d="M8 15.5L11 20"></path>
+        <path d="M13.5 8.5L18 9.3L18 15.8L13.5 16.6Z"></path>
+      </svg>
+    `;
+  }
+
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true" stroke-width="2">
+      <circle cx="9" cy="5.5" r="3.1"></circle>
+      <path d="M9 8.8L9 17"></path>
+      <path d="M9 11L15 10"></path>
+      <path d="M9 11.5L4.8 15"></path>
+      <path d="M9 17L5.8 21"></path>
+      <path d="M9 17L12.8 21"></path>
+      <path d="M15.2 10.2L19.5 7"></path>
+      <path d="M19.5 7L20.5 13.5"></path>
+    </svg>
+  `;
 }
 
 class AudioSystem {
@@ -293,7 +374,8 @@ class Game {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.audio = new AudioSystem();
-    this.unitPanel = document.getElementById("unitPanel");
+    this.deploymentHud = document.getElementById("deploymentHud");
+    this.unitGuide = document.getElementById("unitGuide");
     this.messageBanner = document.getElementById("messageBanner");
     this.redStatus = document.getElementById("redStatus");
     this.centerStatus = document.getElementById("centerStatus");
@@ -304,50 +386,91 @@ class Game {
     this.summaryGrid = document.getElementById("summaryGrid");
     this.restartButton = document.getElementById("restartButton");
 
-    this.unitButtons = new Map();
+    this.deploymentGroups = new Map();
+    this.deploymentButtons = new Map();
     this.lastTimestamp = 0;
     this.nextUnitId = 1;
     this.nextProjectileId = 1;
     this.defaultMessage =
-      "Click a unit card or press 1-4 to deploy. First input also unlocks sound.";
+      "Click a lane strip to deploy. First input also unlocks sound.";
     this.bannerMessage = this.defaultMessage;
     this.bannerTimer = 0;
 
-    this.buildUnitButtons();
+    this.buildDeploymentHud();
+    this.buildUnitGuide();
     this.bindEvents();
     this.reset();
     window.requestAnimationFrame((timestamp) => this.frame(timestamp));
   }
 
-  buildUnitButtons() {
-    this.unitPanel.innerHTML = "";
+  buildDeploymentHud() {
+    this.deploymentHud.innerHTML = "";
+
+    for (const lane of LANE_ORDER) {
+      const group = document.createElement("section");
+      group.className = "deployment-group";
+      group.dataset.lane = lane;
+      group.dataset.state = "contested";
+
+      const title = document.createElement("div");
+      title.className = "deployment-title";
+      title.textContent = lane === "top" ? "Upper" : "Lower";
+
+      const buttons = document.createElement("div");
+      buttons.className = "deploy-buttons";
+
+      for (const typeId of UNIT_ORDER) {
+        const type = UNIT_TYPES[typeId];
+        const button = document.createElement("button");
+        button.className = "deploy-button";
+        button.type = "button";
+        button.dataset.unit = typeId;
+        button.dataset.lane = lane;
+        button.innerHTML = `
+          <span class="deploy-badge">${getUnitIconMarkup(typeId)}</span>
+          <div class="deploy-note">${type.cost}g</div>
+        `;
+        button.addEventListener("click", () => {
+          this.audio.unlock();
+          this.attemptSpawn("blue", typeId, false, lane);
+        });
+        buttons.appendChild(button);
+        this.deploymentButtons.set(`${lane}:${typeId}`, button);
+      }
+
+      group.appendChild(title);
+      group.appendChild(buttons);
+      this.deploymentHud.appendChild(group);
+      this.deploymentGroups.set(lane, group);
+    }
+  }
+
+  buildUnitGuide() {
+    this.unitGuide.innerHTML = "";
 
     for (const typeId of UNIT_ORDER) {
       const type = UNIT_TYPES[typeId];
-      const button = document.createElement("button");
-      button.className = "unit-button";
-      button.type = "button";
-      button.dataset.unit = typeId;
-      button.innerHTML = `
+      const card = document.createElement("article");
+      card.className = "unit-guide-card";
+      card.innerHTML = `
         <div class="unit-name">
-          <strong>${type.hotkey}. ${type.label}</strong>
-          <span>${type.cooldown.toFixed(1)}s cd</span>
+          <strong><span class="unit-icon">${getUnitIconMarkup(typeId)}</span>${type.label}</strong>
+          <span>${type.cost} gold</span>
         </div>
         <div class="unit-meta">
-          <span>${type.cost} gold</span>
           <span>${type.maxHealth} hp</span>
+          <span>${type.cooldown.toFixed(1)}s cd</span>
         </div>
-        <div class="unit-description">${type.description}</div>
-        <div class="cooldown-bar">
-          <div class="cooldown-fill"></div>
+        <div class="unit-stats">
+          <span class="unit-chip">${type.damage} dmg</span>
+          <span class="unit-chip">${type.range <= 40 ? "melee" : `${type.range} range`}</span>
+          <span class="unit-chip">${type.attackInterval.toFixed(2)}s atk</span>
         </div>
+        <div class="unit-role">${type.description}</div>
+        <div class="unit-matchup">Good: ${type.goodAgainst}</div>
+        <div class="unit-matchup">Risk: ${type.strugglesAgainst}</div>
       `;
-      button.addEventListener("click", () => {
-        this.audio.unlock();
-        this.attemptSpawn("blue", typeId, false);
-      });
-      this.unitPanel.appendChild(button);
-      this.unitButtons.set(typeId, button);
+      this.unitGuide.appendChild(card);
     }
   }
 
@@ -357,18 +480,9 @@ class Game {
         return;
       }
 
-      if (event.key === "r" && this.phase === "ended") {
+      if (event.key.toLowerCase() === "r" && this.phase === "ended") {
         this.reset();
-        return;
       }
-
-      const typeId = UNIT_ORDER.find((unitId) => UNIT_TYPES[unitId].hotkey === event.key);
-      if (!typeId) {
-        return;
-      }
-
-      this.audio.unlock();
-      this.attemptSpawn("blue", typeId, false);
     });
 
     this.canvas.addEventListener("pointerdown", () => {
@@ -421,6 +535,7 @@ class Game {
         reserveUnit: "shield",
         focusUntil: 0,
         lastChoice: null,
+        lastLane: null,
       },
       stats: {
         spawned,
@@ -489,13 +604,13 @@ class Game {
     }
 
     this.aiDecisionTimer = 0;
-    const selectedType = this.chooseAIUnit();
-    if (selectedType) {
-      this.attemptSpawn("red", selectedType, true);
+    const selectedAction = this.chooseAIAction();
+    if (selectedAction) {
+      this.attemptSpawn("red", selectedAction.typeId, true, selectedAction.lane);
     }
   }
 
-  chooseAIUnit() {
+  chooseAIAction() {
     if (this.teams.red.unitCount >= UNIT_CAP) {
       return null;
     }
@@ -508,13 +623,14 @@ class Game {
       (unit) => unit.teamId === "blue" && unit.x < 340 && unit.alive,
     ).length;
     const aiBrain = ai.brain;
+    const laneStates = this.getLaneStates();
 
     this.refreshAIFocus(ai, aiCounts, playerCounts, pressure);
     if (this.shouldAIHoldForReserve(ai, aiCounts, pressure)) {
       return null;
     }
 
-    let bestType = null;
+    let bestAction = null;
     let bestScore = -Infinity;
 
     for (const typeId of UNIT_ORDER) {
@@ -535,18 +651,26 @@ class Game {
       }
 
       if (aiBrain.lastChoice === typeId) {
-        score -= 0.82;
+        score -= 0.55;
       }
 
-      score += Math.random() * 0.5;
-      if (score > bestScore) {
-        bestScore = score;
-        bestType = typeId;
+      for (const lane of LANE_ORDER) {
+        let laneScore = score + this.getAILaneScore(typeId, laneStates[lane], aiBrain);
+        if (aiBrain.lastLane === lane) {
+          laneScore -= 0.18;
+        }
+
+        laneScore += Math.random() * 0.5;
+        if (laneScore > bestScore) {
+          bestScore = laneScore;
+          bestAction = { typeId, lane };
+        }
       }
     }
 
-    aiBrain.lastChoice = bestType;
-    return bestType;
+    aiBrain.lastChoice = bestAction ? bestAction.typeId : null;
+    aiBrain.lastLane = bestAction ? bestAction.lane : null;
+    return bestAction;
   }
 
   refreshAIFocus(ai, aiCounts, playerCounts, pressure) {
@@ -705,6 +829,131 @@ class Game {
     return counts;
   }
 
+  getLaneStates() {
+    const laneStates = Object.fromEntries(
+      LANE_ORDER.map((lane) => [
+        lane,
+        {
+          lane,
+          blue: this.createLaneSideState(),
+          red: this.createLaneSideState(),
+          bluePressure: 0,
+          redPressure: 0,
+        },
+      ]),
+    );
+
+    for (const unit of this.units) {
+      if (!unit.alive) {
+        continue;
+      }
+
+      const laneState = laneStates[unit.lane];
+      const side = laneState[unit.teamId];
+      const strength = this.getUnitStrength(unit);
+      const push = this.getUnitPush(unit);
+
+      side.total += 1;
+      side[unit.typeId] += 1;
+      side.strength += strength;
+      side.deepestPush = Math.max(side.deepestPush, push);
+      if (unit.typeId === "archer") {
+        side.ranged += 1;
+      } else {
+        side.frontline += 1;
+      }
+
+      if (unit.teamId === "blue") {
+        laneState.bluePressure += strength * (0.65 + push * 0.9);
+      } else {
+        laneState.redPressure += strength * (0.65 + push * 0.9);
+      }
+    }
+
+    return laneStates;
+  }
+
+  createLaneSideState() {
+    return {
+      total: 0,
+      frontline: 0,
+      ranged: 0,
+      fighter: 0,
+      archer: 0,
+      shield: 0,
+      giant: 0,
+      strength: 0,
+      deepestPush: 0,
+    };
+  }
+
+  getUnitStrength(unit) {
+    const healthRatio = clamp(unit.health / unit.maxHealth, 0.2, 1);
+    return unit.type.weight * (0.55 + healthRatio * 0.45);
+  }
+
+  getUnitPush(unit) {
+    const spawnX = TEAMS[unit.teamId].spawnX;
+    const enemyBaseX = TEAMS[unit.enemyTeamId].baseContactX;
+    const totalDistance = Math.abs(enemyBaseX - spawnX);
+    if (totalDistance <= 0.001) {
+      return 0;
+    }
+
+    return clamp(Math.abs(unit.x - spawnX) / totalDistance, 0, 1);
+  }
+
+  getAILaneScore(typeId, laneState, aiBrain) {
+    const defendingThreat = laneState.bluePressure;
+    const attackingThreat = laneState.redPressure;
+    const friendly = laneState.red;
+    const enemy = laneState.blue;
+    let score = 0;
+
+    if (typeId === "fighter") {
+      score += defendingThreat * 0.62;
+      score += Math.max(0, enemy.total - friendly.total) * 0.48;
+      score += Math.max(0, enemy.archer - friendly.frontline) * 0.7;
+      score += friendly.total === 0 ? 0.35 : 0;
+    }
+
+    if (typeId === "archer") {
+      score += friendly.frontline * 0.85;
+      score += Math.max(0, enemy.frontline - friendly.archer) * 0.42;
+      score += attackingThreat * 0.36;
+      score -= defendingThreat > attackingThreat + 1.4 ? 0.28 : 0;
+    }
+
+    if (typeId === "shield") {
+      score += defendingThreat * 0.96;
+      score += enemy.archer * 0.74;
+      score += Math.max(0, enemy.frontline - friendly.frontline) * 0.44;
+      score += friendly.shield === 0 ? 0.16 : 0;
+    }
+
+    if (typeId === "giant") {
+      score += attackingThreat * 0.94;
+      score += friendly.frontline * 0.82;
+      score += enemy.archer === 0 ? 0.62 : 0;
+      score -= enemy.archer * 0.54;
+      score -= friendly.total === 0 ? 0.52 : 0;
+    }
+
+    if (aiBrain.focus === "brace") {
+      score += defendingThreat * 0.25;
+    }
+
+    if (aiBrain.focus === "volley" && typeId === "archer") {
+      score += friendly.frontline * 0.22;
+    }
+
+    if (aiBrain.focus === "power" && typeId === "giant") {
+      score += attackingThreat * 0.24;
+    }
+
+    return score;
+  }
+
   canSpawn(teamId, typeId) {
     const team = this.teams[teamId];
     const type = UNIT_TYPES[typeId];
@@ -716,7 +965,7 @@ class Game {
     );
   }
 
-  attemptSpawn(teamId, typeId, fromAI) {
+  attemptSpawn(teamId, typeId, fromAI, laneOverride = null) {
     const team = this.teams[teamId];
     const type = UNIT_TYPES[typeId];
 
@@ -748,7 +997,11 @@ class Game {
       return false;
     }
 
-    const lane = this.chooseRandomLane();
+    const lane = LANE_ORDER.includes(laneOverride)
+      ? laneOverride
+      : fromAI
+        ? this.chooseRandomLane()
+        : "top";
     const route = ROUTES[teamId][lane].map((point) => ({ x: point.x, y: point.y }));
     const spawnPoint = route[0];
     const newUnit = {
@@ -784,7 +1037,7 @@ class Game {
 
     if (!fromAI) {
       this.audio.play("spawn");
-      this.setMessage(`${type.label} deployed on the ${LANE_LABELS[lane]} route.`, 1.2);
+      this.setMessage(`${type.label} deployed to the ${LANE_LABELS[lane]} route.`, 1.2);
     }
 
     return true;
@@ -1208,13 +1461,14 @@ class Game {
   renderHud() {
     const red = this.teams.red;
     const blue = this.teams.blue;
+    const laneStates = this.getLaneStates();
 
     this.redStatus.innerHTML = `
       <h3 style="color: ${TEAMS.red.color};">Red Base (AI)</h3>
       <div class="hud-lines">
         <div>Base HP: ${Math.max(0, Math.round(red.baseHp))} / ${BASE_MAX_HEALTH}</div>
         <div>Fielded units: ${red.unitCount} / ${UNIT_CAP}</div>
-        <div>Income: +${GOLD_PER_SECOND}/s</div>
+        <div>Economy: ${Math.floor(red.gold)} gold, +${GOLD_PER_SECOND}/s</div>
       </div>
     `;
 
@@ -1222,7 +1476,8 @@ class Game {
       <div class="hud-lines">
         <div><strong>${this.phase === "playing" ? "Battle live" : "Battle over"}</strong></div>
         <div>Time: ${this.formatTime(this.timeElapsed)}</div>
-        <div>Map: 2 mirrored routes</div>
+        <div>Enemy posture: ${AI_FOCUS_LABELS[red.brain.focus]}</div>
+        ${LANE_ORDER.map((lane) => `<div>${this.formatLanePressureLine(lane, laneStates[lane])}</div>`).join("")}
       </div>
     `;
 
@@ -1231,27 +1486,70 @@ class Game {
       <div class="hud-lines">
         <div>Base HP: ${Math.max(0, Math.round(blue.baseHp))} / ${BASE_MAX_HEALTH}</div>
         <div>Gold: ${Math.floor(blue.gold)}</div>
+        <div>Income: +${GOLD_PER_SECOND}/s</div>
         <div>Fielded units: ${blue.unitCount} / ${UNIT_CAP}</div>
       </div>
     `;
 
-    for (const typeId of UNIT_ORDER) {
-      const button = this.unitButtons.get(typeId);
-      const type = UNIT_TYPES[typeId];
-      const cooldown = this.teams.blue.cooldowns[typeId];
-      const fill = button.querySelector(".cooldown-fill");
-      const fillRatio = type.cooldown === 0 ? 0 : cooldown / type.cooldown;
-      const available = this.canSpawn("blue", typeId);
-      fill.style.width = `${Math.round(fillRatio * 100)}%`;
-      button.disabled = false;
-      button.classList.toggle("is-disabled", !available);
-      button.setAttribute("aria-disabled", String(!available));
-      button.title = cooldown > 0
-        ? `${cooldown.toFixed(1)}s cooldown remaining`
-        : !available
-          ? "Not enough gold or unit cap reached"
-          : `Deploy ${type.label}`;
+    this.renderDeploymentHud(laneStates);
+  }
+
+  renderDeploymentHud(laneStates) {
+    for (const lane of LANE_ORDER) {
+      const group = this.deploymentGroups.get(lane);
+      const laneState = laneStates[lane];
+      const laneStateName = this.getLaneStateName(laneState);
+      group.dataset.state = laneStateName;
+      group.title = `${LANE_NAMES[lane]}: ${laneState.blue.total} vs ${laneState.red.total} · ${this.describeLaneStatusFromBlue(laneState)}`;
+
+      for (const typeId of UNIT_ORDER) {
+        const button = this.deploymentButtons.get(`${lane}:${typeId}`);
+        const type = UNIT_TYPES[typeId];
+        const cooldown = this.teams.blue.cooldowns[typeId];
+        const note = button.querySelector(".deploy-note");
+        const available = this.canSpawn("blue", typeId);
+
+        note.textContent = cooldown > 0 ? `${cooldown.toFixed(1)}s` : `${type.cost}`;
+        button.disabled = !available;
+        button.classList.toggle("is-disabled", !available);
+        button.setAttribute("aria-disabled", String(!available));
+        button.title = cooldown > 0
+          ? `${type.label} cooling down: ${cooldown.toFixed(1)}s left`
+          : !available
+            ? `Need ${type.cost} gold or more field space`
+            : `Deploy ${type.label} to ${LANE_NAMES[lane]}`;
+      }
     }
+  }
+
+  getLaneStateName(laneState) {
+    const netPressure = laneState.bluePressure - laneState.redPressure;
+    if (netPressure > 1.5) {
+      return "pushing";
+    }
+
+    if (netPressure < -1.5) {
+      return "threatened";
+    }
+
+    return "contested";
+  }
+
+  formatLanePressureLine(lane, laneState) {
+    return `${LANE_NAMES[lane]}: Blue ${laneState.blue.total} vs Red ${laneState.red.total} · ${this.describeLaneStatusFromBlue(laneState)}`;
+  }
+
+  describeLaneStatusFromBlue(laneState) {
+    const netPressure = laneState.bluePressure - laneState.redPressure;
+    if (netPressure > 1.5) {
+      return "you are pushing";
+    }
+
+    if (netPressure < -1.5) {
+      return "enemy pressure";
+    }
+
+    return "contested";
   }
 
   setMessage(message, duration) {

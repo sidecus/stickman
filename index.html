@@ -19,13 +19,13 @@
       </section>
 
       <section class="game-shell">
-        <div class="hud-row">
-          <div class="hud-card" id="redStatus"></div>
-          <div class="hud-card hud-card-center" id="centerStatus"></div>
-          <div class="hud-card" id="blueStatus"></div>
-        </div>
+        <div class="map-column">
+          <div class="hud-row">
+            <div class="hud-card" id="redStatus"></div>
+            <div class="hud-card hud-card-center" id="centerStatus"></div>
+            <div class="hud-card" id="blueStatus"></div>
+          </div>
 
-        <div class="battle-layout">
           <div class="canvas-frame">
             <canvas
               id="gameCanvas"
@@ -33,16 +33,17 @@
               height="720"
               aria-label="Stickman battle arena"
             ></canvas>
+            <div class="deployment-hud" id="deploymentHud"></div>
             <div class="message-banner" id="messageBanner">
-              点击单位卡片或按 1-4 部署。首次输入也会解锁声音。
+              Click a lane strip to deploy. First input also unlocks sound.
             </div>
           </div>
-
-          <aside class="side-panel">
-            <p class="eyebrow">招募</p>
-            <div class="unit-panel" id="unitPanel"></div>
-          </aside>
         </div>
+
+        <aside class="side-panel">
+          <p class="eyebrow">Units</p>
+          <div class="unit-guide" id="unitGuide"></div>
+        </aside>
       </section>
     </main>
 

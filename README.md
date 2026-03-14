@@ -15,17 +15,13 @@ Option 2:
 
 ## Controls
 
-- Click a unit card to deploy
-- Press `1` for Fighter
-- Press `2` for Archer
-- Press `3` for Shield
-- Press `4` for Giant
+- Click a lane strip beside the battlefield to deploy to that route
 - Press `R` to restart after a match ends
 
 ## Included in this prototype
 
 - Blue player vs red AI
-- Two mirrored routes with automatic route choice
+- Two mirrored routes with player-targeted deployment and lane-aware AI
 - Passive income, gold costs, cooldowns, and 20-unit field cap
 - Four unit types with distinct combat roles
 - Base destruction win condition
