@@ -10,7 +10,7 @@
     <main class="app-shell">
       <section class="title-bar">
         <div>
-          <p class="eyebrow">游戏设计与指导：雷神队8号——想想</p>
+          <p class="eyebrow">游戏设计与指导：雷神队8号-想想同学</p>
           <h1>想想的火柴人战争</h1>
         </div>
         <p class="subtitle">
@@ -40,10 +40,35 @@
           </div>
         </div>
 
-        <aside class="side-panel">
-          <p class="eyebrow">兵种</p>
+        <aside class="side-panel" id="sidePanel">
+          <div class="side-panel-header">
+            <p class="eyebrow">兵种</p>
+            <button
+              class="side-panel-close"
+              id="unitGuideClose"
+              type="button"
+              aria-label="收起兵种面板"
+            >
+              收起
+            </button>
+          </div>
           <div class="unit-guide" id="unitGuide"></div>
         </aside>
+        <button
+          class="unit-guide-toggle"
+          id="unitGuideToggle"
+          type="button"
+          aria-controls="sidePanel"
+          aria-expanded="false"
+        >
+          兵种
+        </button>
+        <button
+          class="side-panel-backdrop"
+          id="sidePanelBackdrop"
+          type="button"
+          aria-label="关闭兵种面板"
+        ></button>
       </section>
     </main>
 

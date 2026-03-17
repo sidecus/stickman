@@ -403,11 +403,19 @@ class Game {
     this.redStatus = document.getElementById("redStatus");
     this.centerStatus = document.getElementById("centerStatus");
     this.blueStatus = document.getElementById("blueStatus");
+    this.sidePanel = document.getElementById("sidePanel");
+    this.unitGuideToggle = document.getElementById("unitGuideToggle");
+    this.unitGuideClose = document.getElementById("unitGuideClose");
+    this.sidePanelBackdrop = document.getElementById("sidePanelBackdrop");
     this.overlay = document.getElementById("overlay");
     this.overlayTitle = document.getElementById("overlayTitle");
     this.overlaySubtitle = document.getElementById("overlaySubtitle");
     this.summaryGrid = document.getElementById("summaryGrid");
     this.restartButton = document.getElementById("restartButton");
+    this.mobileSidePanelQuery = window.matchMedia("(max-width: 1100px)");
+    this.handleMobileSidePanelChange = () => {
+      this.syncResponsivePanels();
+    };
 
     this.deploymentGroups = new Map();
     this.deploymentButtons = new Map();
@@ -422,6 +430,7 @@ class Game {
     this.buildDeploymentHud();
     this.buildUnitGuide();
     this.bindEvents();
+    this.syncResponsivePanels();
     this.reset();
     window.requestAnimationFrame((timestamp) => this.frame(timestamp));
   }
@@ -503,6 +512,11 @@ class Game {
         return;
       }
 
+      if (event.key === "Escape" && this.isMobileSidePanelOpen()) {
+        this.setMobileSidePanelOpen(false);
+        return;
+      }
+
       if (event.key.toLowerCase() === "r" && this.phase === "ended") {
         this.reset();
       }
@@ -516,6 +530,24 @@ class Game {
       this.audio.unlock();
       this.reset();
     });
+
+    this.unitGuideToggle.addEventListener("click", () => {
+      this.setMobileSidePanelOpen(!this.isMobileSidePanelOpen());
+    });
+
+    this.unitGuideClose.addEventListener("click", () => {
+      this.setMobileSidePanelOpen(false);
+    });
+
+    this.sidePanelBackdrop.addEventListener("click", () => {
+      this.setMobileSidePanelOpen(false);
+    });
+
+    if (typeof this.mobileSidePanelQuery.addEventListener === "function") {
+      this.mobileSidePanelQuery.addEventListener("change", this.handleMobileSidePanelChange);
+    } else {
+      this.mobileSidePanelQuery.addListener(this.handleMobileSidePanelChange);
+    }
   }
 
   reset() {
@@ -536,6 +568,26 @@ class Game {
     this.lastTimestamp = 0;
     this.overlay.classList.add("hidden");
     this.renderHud();
+  }
+
+  isMobileLayout() {
+    return this.mobileSidePanelQuery.matches;
+  }
+
+  isMobileSidePanelOpen() {
+    return document.body.classList.contains("unit-guide-open");
+  }
+
+  syncResponsivePanels() {
+    this.setMobileSidePanelOpen(false);
+    this.sidePanel.dataset.mobile = this.isMobileLayout() ? "true" : "false";
+  }
+
+  setMobileSidePanelOpen(open) {
+    const shouldOpen = this.isMobileLayout() && open;
+    document.body.classList.toggle("unit-guide-open", shouldOpen);
+    this.unitGuideToggle.setAttribute("aria-expanded", String(shouldOpen));
+    this.unitGuideToggle.textContent = shouldOpen ? "收起兵种" : "兵种";
   }
 
   createTeamState(teamId) {
@@ -1638,10 +1690,10 @@ class Game {
     ctx.closePath();
     ctx.fill();
 
-    this.drawSun(ctx, 1120, 90, 42);
-    this.drawCloud(ctx, 180, 110, 70, 26, 0.22);
-    this.drawCloud(ctx, 430, 70, 56, 20, 0.18);
-    this.drawCloud(ctx, 820, 140, 88, 32, 0.2);
+    this.drawSun(ctx, 150, 74, 40);
+    this.drawCloud(ctx, 450, 106, 74, 28, 0.2);
+    this.drawCloud(ctx, 690, 132, 92, 32, 0.18);
+    this.drawCloud(ctx, 940, 102, 78, 26, 0.2);
   }
 
   drawSun(ctx, x, y, radius) {
