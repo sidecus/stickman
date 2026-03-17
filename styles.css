@@ -114,6 +114,14 @@ h1 {
   line-height: 0.95;
 }
 
+#overlayTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1;
+}
+
 .subtitle {
   max-width: 440px;
   font-size: 0.98rem;
@@ -439,6 +447,37 @@ canvas {
   background: rgba(254, 246, 225, 0.98);
 }
 
+.result-badge {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  border: 2px solid rgba(90, 77, 57, 0.28);
+  background: rgba(255, 251, 241, 0.9);
+}
+
+.overlay[data-result="win"] .result-badge {
+  color: #9f6a12;
+  background: rgba(244, 223, 153, 0.45);
+}
+
+.overlay[data-result="lose"] .result-badge {
+  color: #8c3b37;
+  background: rgba(243, 177, 171, 0.36);
+}
+
+.result-badge svg {
+  width: 30px;
+  height: 30px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .overlay-subtitle {
   margin-top: 10px;
   font-size: 1rem;
@@ -464,16 +503,68 @@ canvas {
 }
 
 .summary-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 0;
+  padding: 6px 0;
   border-bottom: 1px dashed rgba(90, 77, 57, 0.32);
   font-size: 0.95rem;
 }
 
+.summary-line-unit {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.summary-line-total {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+}
+
 .summary-line:last-child {
   border-bottom: 0;
+}
+
+.summary-unit {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(90, 77, 57, 0.08);
+  border: 1px solid rgba(90, 77, 57, 0.16);
+  color: var(--ink);
+}
+
+.summary-unit svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.summary-stat {
+  display: grid;
+  grid-template-columns: auto minmax(3ch, 3ch);
+  align-items: baseline;
+  gap: 8px;
+  margin-right: 24px;
+}
+
+.summary-stat-label,
+.summary-total-label {
+  color: rgba(43, 37, 28, 0.86);
+}
+
+.summary-stat-value,
+.summary-total-value {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .restart-button {
@@ -506,6 +597,10 @@ canvas {
 
   .subtitle {
     text-align: left;
+  }
+
+  #overlayTitle {
+    font-size: clamp(1.8rem, 7vw, 2.6rem);
   }
 
   .hud-row {
@@ -542,6 +637,16 @@ canvas {
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .summary-line-unit {
+    grid-template-columns: 38px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .summary-stat {
+    grid-template-columns: auto minmax(2ch, 3ch);
+    gap: 6px;
   }
 }
 

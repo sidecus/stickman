@@ -280,6 +280,28 @@ function getUnitIconMarkup(typeId) {
   `;
 }
 
+function getResultIconMarkup(result) {
+  if (result === "win") {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" stroke-width="1.9">
+        <path d="M7 4H17L16 8C15.2 11 13.8 13 12 14C10.2 13 8.8 11 8 8Z"></path>
+        <path d="M9.5 17H14.5"></path>
+        <path d="M12 14V20"></path>
+        <path d="M7 5H4.5C4.5 8.2 5.7 10 8.2 10"></path>
+        <path d="M17 5H19.5C19.5 8.2 18.3 10 15.8 10"></path>
+      </svg>
+    `;
+  }
+
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true" stroke-width="1.9">
+      <path d="M12 3.5L19 6.5V11.2C19 15.2 16.2 18.8 12 20.5C7.8 18.8 5 15.2 5 11.2V6.5Z"></path>
+      <path d="M8.5 8.5L15.5 15.5"></path>
+      <path d="M15.5 8.5L8.5 15.5"></path>
+    </svg>
+  `;
+}
+
 class AudioSystem {
   constructor() {
     const Context = window.AudioContext || window.webkitAudioContext;
@@ -1420,12 +1442,17 @@ class Game {
 
     this.phase = "ended";
     const playerWon = winnerTeamId === "blue";
-    this.overlayTitle.textContent = playerWon ? "胜利" : "战败";
+    const result = playerWon ? "win" : "lose";
+    this.overlay.dataset.result = result;
+    this.overlayTitle.innerHTML = `
+      <span class="result-badge" aria-hidden="true">${getResultIconMarkup(result)}</span>
+      <span>${playerWon ? "胜利" : "战败"}</span>
+    `;
     this.overlaySubtitle.textContent =
       `对局时长 ${this.formatTime(this.timeElapsed)}。` +
       `蓝方总计造成 ${Math.round(this.teams.blue.stats.damageDealt)} 点伤害，承受 ` +
       `${Math.round(this.teams.blue.stats.damageTaken)} 点伤害。`;
-    this.summaryGrid.innerHTML = this.renderSummaryCard("blue") + this.renderSummaryCard("red");
+    this.summaryGrid.innerHTML = this.renderSummaryCard("red") + this.renderSummaryCard("blue");
     this.overlay.classList.remove("hidden");
     this.setMessage(playerWon ? "敌方基地已被摧毁。" : "我方基地已被攻破。", 5);
     this.audio.play(playerWon ? "win" : "lose");
@@ -1437,9 +1464,18 @@ class Game {
     const lines = UNIT_ORDER.map((typeId) => {
       const type = UNIT_TYPES[typeId];
       return `
-        <div class="summary-line">
-          <span>${type.label}：部署 ${team.stats.spawned[typeId]}</span>
-          <span>阵亡 ${team.stats.lost[typeId]}</span>
+        <div class="summary-line summary-line-unit">
+          <span class="summary-unit" title="${type.label}" aria-label="${type.label}">
+            ${getUnitIconMarkup(typeId)}
+          </span>
+          <span class="summary-stat">
+            <span class="summary-stat-label">部署</span>
+            <strong class="summary-stat-value">${team.stats.spawned[typeId]}</strong>
+          </span>
+          <span class="summary-stat">
+            <span class="summary-stat-label">阵亡</span>
+            <strong class="summary-stat-value">${team.stats.lost[typeId]}</strong>
+          </span>
         </div>
       `;
     }).join("");
@@ -1448,13 +1484,13 @@ class Game {
       <div class="summary-card" style="border-color: ${withAlpha(color, 0.55)};">
         <h3 style="color: ${color};">${TEAMS[teamId].name}</h3>
         ${lines}
-        <div class="summary-line">
-          <span>总输出伤害</span>
-          <span>${Math.round(team.stats.damageDealt)}</span>
+        <div class="summary-line summary-line-total">
+          <span class="summary-total-label">总输出伤害</span>
+          <strong class="summary-total-value">${Math.round(team.stats.damageDealt)}</strong>
         </div>
-        <div class="summary-line">
-          <span>总承受伤害</span>
-          <span>${Math.round(team.stats.damageTaken)}</span>
+        <div class="summary-line summary-line-total">
+          <span class="summary-total-label">总承受伤害</span>
+          <strong class="summary-total-value">${Math.round(team.stats.damageTaken)}</strong>
         </div>
       </div>
     `;
