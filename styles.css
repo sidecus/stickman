@@ -189,6 +189,24 @@ h1 {
   background: linear-gradient(180deg, #f9f0d3 0%, #ebd6a4 100%);
 }
 
+.time-display {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 120px;
+  padding: 8px 18px;
+  border: 3px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 251, 241, 0.82);
+  box-shadow: 0 8px 16px var(--shadow);
+  text-align: center;
+  font-size: 1.15rem;
+  line-height: 1;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+}
+
 .side-panel {
   min-height: 0;
   height: 100%;
@@ -266,12 +284,14 @@ canvas {
   border: 2px solid rgba(90, 77, 57, 0.4);
   font-size: 0.95rem;
   backdrop-filter: blur(4px);
+  z-index: 2;
 }
 
 .deployment-hud {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 1;
 }
 
 .deployment-group {
@@ -630,7 +650,7 @@ canvas {
   grid-template-columns: auto minmax(3ch, 3ch);
   align-items: baseline;
   gap: 8px;
-  margin-right: 24px;
+  margin-right: 32px;
 }
 
 .summary-stat-label,

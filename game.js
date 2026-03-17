@@ -400,6 +400,7 @@ class Game {
     this.deploymentHud = document.getElementById("deploymentHud");
     this.unitGuide = document.getElementById("unitGuide");
     this.messageBanner = document.getElementById("messageBanner");
+    this.timeDisplay = document.getElementById("timeDisplay");
     this.redStatus = document.getElementById("redStatus");
     this.centerStatus = document.getElementById("centerStatus");
     this.blueStatus = document.getElementById("blueStatus");
@@ -1548,38 +1549,35 @@ class Game {
     `;
   }
 
-  renderHud() {
-    const red = this.teams.red;
-    const blue = this.teams.blue;
-    const laneStates = this.getLaneStates();
+  renderTeamStatusCard(teamId, roleLabel) {
+    const team = this.teams[teamId];
 
-    this.redStatus.innerHTML = `
-      <h3 style="color: ${TEAMS.red.color};">红方基地（AI）</h3>
+    return `
+      <h3 style="color: ${TEAMS[teamId].color};">${TEAMS[teamId].name}基地（${roleLabel}）</h3>
       <div class="hud-lines">
-        <div>基地生命：${Math.max(0, Math.round(red.baseHp))} / ${BASE_MAX_HEALTH}</div>
-        <div>场上单位：${red.unitCount} / ${UNIT_CAP}</div>
-        <div>经济：${Math.floor(red.gold)} 金币，+${GOLD_PER_SECOND}/秒</div>
+        <div>基地生命：${Math.max(0, Math.round(team.baseHp))} / ${BASE_MAX_HEALTH}</div>
+        <div>场上单位：${team.unitCount} / ${UNIT_CAP}</div>
+        <div>经济：${Math.floor(team.gold)} 金币，+${GOLD_PER_SECOND}/秒</div>
       </div>
     `;
+  }
+
+  renderHud() {
+    const red = this.teams.red;
+    const laneStates = this.getLaneStates();
+
+    this.redStatus.innerHTML = this.renderTeamStatusCard("red", "AI");
+    this.timeDisplay.textContent = this.formatTime(this.timeElapsed);
 
     this.centerStatus.innerHTML = `
       <div class="hud-lines">
         <div><strong>${this.phase === "playing" ? "战斗进行中" : "战斗结束"}</strong></div>
-        <div>时间：${this.formatTime(this.timeElapsed)}</div>
         <div>敌方策略：${AI_FOCUS_LABELS[red.brain.focus]}</div>
         ${LANE_ORDER.map((lane) => `<div>${this.formatLanePressureLine(lane, laneStates[lane])}</div>`).join("")}
       </div>
     `;
 
-    this.blueStatus.innerHTML = `
-      <h3 style="color: ${TEAMS.blue.color};">蓝方基地（玩家）</h3>
-      <div class="hud-lines">
-        <div>基地生命：${Math.max(0, Math.round(blue.baseHp))} / ${BASE_MAX_HEALTH}</div>
-        <div>金币：${Math.floor(blue.gold)}</div>
-        <div>收入：+${GOLD_PER_SECOND}/秒</div>
-        <div>场上单位：${blue.unitCount} / ${UNIT_CAP}</div>
-      </div>
-    `;
+    this.blueStatus.innerHTML = this.renderTeamStatusCard("blue", "玩家");
 
     this.renderDeploymentHud(laneStates);
   }
