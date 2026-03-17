@@ -185,7 +185,8 @@ const PLATFORM_SEGMENTS = [
   { x1: MAP.bottomSegmentStart, y1: MAP.bottomY, x2: MAP.bottomSegmentEnd, y2: MAP.bottomY },
 ];
 
-const BASE_MAX_HEALTH = 1000;
+const BASE_MAX_HEALTH = 1600;
+const BASE_DAMAGE_MULTIPLIER = 0.85;
 const STARTING_GOLD = 280;
 const GOLD_PER_SECOND = 11;
 const UNIT_CAP = 20;
@@ -1260,7 +1261,8 @@ class Game {
       if (defendingTeam.baseHp <= 0) {
         return;
       }
-      const actualDamage = Math.min(defendingTeam.baseHp, damage);
+      const baseDamage = Math.max(1, Math.round(damage * BASE_DAMAGE_MULTIPLIER));
+      const actualDamage = Math.min(defendingTeam.baseHp, baseDamage);
       defendingTeam.baseHp -= actualDamage;
       sourceTeam.stats.damageDealt += actualDamage;
       defendingTeam.stats.damageTaken += actualDamage;
