@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>想想的火柴人战争</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -26,18 +26,20 @@
             <div class="hud-card" id="blueStatus"></div>
           </div>
 
-          <div class="canvas-frame">
-            <div class="time-display" id="timeDisplay"></div>
-            <canvas
-              id="gameCanvas"
-              width="1280"
-              height="720"
-              aria-label="火柴人战场"
-            ></canvas>
-            <div class="deployment-hud" id="deploymentHud"></div>
-            <div class="message-banner" id="messageBanner">
-              点击一路的部署栏即可出兵。首次操作也会同时开启声音。
+          <div class="battle-stage">
+            <div class="canvas-frame">
+              <div class="time-display" id="timeDisplay"></div>
+              <canvas
+                id="gameCanvas"
+                width="1280"
+                height="720"
+                aria-label="火柴人战场"
+              ></canvas>
+              <div class="message-banner" id="messageBanner">
+                点击一路的部署栏即可出兵。首次操作也会同时开启声音。
+              </div>
             </div>
+            <div class="deployment-hud" id="deploymentHud"></div>
           </div>
         </div>
 
@@ -82,6 +84,10 @@
         <button class="restart-button" id="restartButton">重新开始比赛</button>
       </div>
     </section>
+
+    <div class="rotate-hint" id="rotateHint" aria-live="polite">
+      建议切换到横屏模式游玩
+    </div>
 
     <script type="module" src="game.js"></script>
   </body>

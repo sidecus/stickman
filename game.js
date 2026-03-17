@@ -413,9 +413,15 @@ class Game {
     this.overlaySubtitle = document.getElementById("overlaySubtitle");
     this.summaryGrid = document.getElementById("summaryGrid");
     this.restartButton = document.getElementById("restartButton");
+    this.rotateHint = document.getElementById("rotateHint");
     this.mobileSidePanelQuery = window.matchMedia("(max-width: 1100px)");
-    this.handleMobileSidePanelChange = () => {
+    this.mobilePortraitQuery =
+      window.matchMedia("(max-width: 900px) and (pointer: coarse) and (orientation: portrait)");
+    this.mobileLandscapeHudQuery =
+      window.matchMedia("(max-height: 500px) and (orientation: landscape)");
+    this.handleViewportChange = () => {
       this.syncResponsivePanels();
+      this.renderHud();
     };
 
     this.deploymentGroups = new Map();
@@ -545,9 +551,13 @@ class Game {
     });
 
     if (typeof this.mobileSidePanelQuery.addEventListener === "function") {
-      this.mobileSidePanelQuery.addEventListener("change", this.handleMobileSidePanelChange);
+      this.mobileSidePanelQuery.addEventListener("change", this.handleViewportChange);
+      this.mobilePortraitQuery.addEventListener("change", this.handleViewportChange);
+      this.mobileLandscapeHudQuery.addEventListener("change", this.handleViewportChange);
     } else {
-      this.mobileSidePanelQuery.addListener(this.handleMobileSidePanelChange);
+      this.mobileSidePanelQuery.addListener(this.handleViewportChange);
+      this.mobilePortraitQuery.addListener(this.handleViewportChange);
+      this.mobileLandscapeHudQuery.addListener(this.handleViewportChange);
     }
   }
 
@@ -575,6 +585,10 @@ class Game {
     return this.mobileSidePanelQuery.matches;
   }
 
+  isCompactLandscapeHud() {
+    return this.mobileLandscapeHudQuery.matches;
+  }
+
   isMobileSidePanelOpen() {
     return document.body.classList.contains("unit-guide-open");
   }
@@ -582,6 +596,7 @@ class Game {
   syncResponsivePanels() {
     this.setMobileSidePanelOpen(false);
     this.sidePanel.dataset.mobile = this.isMobileLayout() ? "true" : "false";
+    this.rotateHint.classList.toggle("is-visible", this.mobilePortraitQuery.matches);
   }
 
   setMobileSidePanelOpen(open) {
@@ -639,7 +654,7 @@ class Game {
     if (this.bannerTimer > 0) {
       this.bannerTimer = Math.max(0, this.bannerTimer - delta);
       if (this.bannerTimer === 0) {
-        this.messageBanner.textContent = this.defaultMessage;
+        this.messageBanner.classList.remove("is-visible");
       }
     }
 
@@ -1551,13 +1566,22 @@ class Game {
 
   renderTeamStatusCard(teamId, roleLabel) {
     const team = this.teams[teamId];
+    const compact = this.isCompactLandscapeHud();
+    const lines = compact
+      ? [
+          `基地：${Math.max(0, Math.round(team.baseHp))} / ${BASE_MAX_HEALTH}`,
+          `单位${team.unitCount}/${UNIT_CAP} · ${Math.floor(team.gold)}金 · +${GOLD_PER_SECOND}/秒`,
+        ]
+      : [
+          `基地生命：${Math.max(0, Math.round(team.baseHp))} / ${BASE_MAX_HEALTH}`,
+          `场上单位：${team.unitCount} / ${UNIT_CAP}`,
+          `经济：${Math.floor(team.gold)} 金币，+${GOLD_PER_SECOND}/秒`,
+        ];
 
     return `
       <h3 style="color: ${TEAMS[teamId].color};">${TEAMS[teamId].name}基地（${roleLabel}）</h3>
       <div class="hud-lines">
-        <div>基地生命：${Math.max(0, Math.round(team.baseHp))} / ${BASE_MAX_HEALTH}</div>
-        <div>场上单位：${team.unitCount} / ${UNIT_CAP}</div>
-        <div>经济：${Math.floor(team.gold)} 金币，+${GOLD_PER_SECOND}/秒</div>
+        ${lines.map((line) => `<div>${line}</div>`).join("")}
       </div>
     `;
   }
@@ -1565,15 +1589,25 @@ class Game {
   renderHud() {
     const red = this.teams.red;
     const laneStates = this.getLaneStates();
+    const compact = this.isCompactLandscapeHud();
 
     this.redStatus.innerHTML = this.renderTeamStatusCard("red", "AI");
     this.timeDisplay.textContent = this.formatTime(this.timeElapsed);
 
     this.centerStatus.innerHTML = `
       <div class="hud-lines">
+        ${
+          compact
+            ? `
+        <div><strong>${this.phase === "playing" ? "战斗中" : "战斗结束"} · ${AI_FOCUS_LABELS[red.brain.focus]}</strong></div>
+        <div>${LANE_ORDER.map((lane) => this.formatCompactLanePressureLine(lane, laneStates[lane])).join(" · ")}</div>
+        `
+            : `
         <div><strong>${this.phase === "playing" ? "战斗进行中" : "战斗结束"}</strong></div>
         <div>敌方策略：${AI_FOCUS_LABELS[red.brain.focus]}</div>
         ${LANE_ORDER.map((lane) => `<div>${this.formatLanePressureLine(lane, laneStates[lane])}</div>`).join("")}
+        `
+        }
       </div>
     `;
 
@@ -1627,6 +1661,10 @@ class Game {
     return `${LANE_NAMES[lane]}：蓝方 ${laneState.blue.total} 对 红方 ${laneState.red.total} · ${this.describeLaneStatusFromBlue(laneState)}`;
   }
 
+  formatCompactLanePressureLine(lane, laneState) {
+    return `${LANE_LABELS[lane]} ${laneState.blue.total}-${laneState.red.total} ${this.describeLaneStatusFromBlue(laneState)}`;
+  }
+
   describeLaneStatusFromBlue(laneState) {
     const netPressure = laneState.bluePressure - laneState.redPressure;
     if (netPressure > 1.5) {
@@ -1644,6 +1682,7 @@ class Game {
     this.bannerMessage = message;
     this.bannerTimer = duration;
     this.messageBanner.textContent = message;
+    this.messageBanner.classList.add("is-visible");
   }
 
   formatTime(timeSeconds) {
