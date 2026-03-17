@@ -1,19 +1,19 @@
 const UNIT_ORDER = ["fighter", "archer", "shield", "giant"];
 const LANE_NAMES = {
-  top: "Upper route",
-  bottom: "Lower route",
+  top: "上路",
+  bottom: "下路",
 };
 const AI_FOCUS_LABELS = {
-  balanced: "Balanced",
-  brace: "Brace",
-  volley: "Volley",
-  power: "Power push",
+  balanced: "均衡",
+  brace: "固守",
+  volley: "齐射",
+  power: "强攻",
 };
 
 const UNIT_TYPES = {
   fighter: {
     id: "fighter",
-    label: "Fighter",
+    label: "战士",
     hotkey: "1",
     cost: 50,
     cooldown: 1.4,
@@ -24,14 +24,14 @@ const UNIT_TYPES = {
     aggroRange: 110,
     attackInterval: 0.75,
     radius: 13,
-    description: "Cheap, balanced frontliner.",
-    goodAgainst: "archers and exposed lanes",
-    strugglesAgainst: "shields and giant walls",
+    description: "便宜耐用，适合顶在前线。",
+    goodAgainst: "弓箭手和空虚一路",
+    strugglesAgainst: "盾兵和巨人防线",
     weight: 1,
   },
   archer: {
     id: "archer",
-    label: "Archer",
+    label: "弓箭手",
     hotkey: "2",
     cost: 80,
     cooldown: 2.6,
@@ -43,14 +43,14 @@ const UNIT_TYPES = {
     attackInterval: 1.05,
     projectileSpeed: 420,
     radius: 12,
-    description: "Long range damage from behind the line.",
-    goodAgainst: "giants and stalled lanes",
-    strugglesAgainst: "fighters reaching the backline",
+    description: "在后排持续提供远程伤害。",
+    goodAgainst: "巨人和僵持战线",
+    strugglesAgainst: "冲进后排的战士",
     weight: 1.15,
   },
   shield: {
     id: "shield",
-    label: "Shield",
+    label: "盾兵",
     hotkey: "3",
     cost: 95,
     cooldown: 3.4,
@@ -61,14 +61,14 @@ const UNIT_TYPES = {
     aggroRange: 102,
     attackInterval: 0.9,
     radius: 16,
-    description: "High health, low damage melee tank.",
-    goodAgainst: "archers and holding pressure",
-    strugglesAgainst: "giants and slow pushes",
+    description: "高生命低伤害的近战肉盾。",
+    goodAgainst: "弓箭手和守住压力",
+    strugglesAgainst: "巨人和慢速推进",
     weight: 1.35,
   },
   giant: {
     id: "giant",
-    label: "Giant",
+    label: "巨人",
     hotkey: "4",
     cost: 190,
     cooldown: 7.2,
@@ -79,9 +79,9 @@ const UNIT_TYPES = {
     aggroRange: 120,
     attackInterval: 1.45,
     radius: 24,
-    description: "Slow, huge, and dangerous into anything.",
-    goodAgainst: "bases and tank lines",
-    strugglesAgainst: "focused archers",
+    description: "缓慢但压迫感极强，正面很难挡住。",
+    goodAgainst: "基地和肉盾前排",
+    strugglesAgainst: "集火弓箭手",
     weight: 2.4,
   },
 };
@@ -102,14 +102,14 @@ const MAP = {
 
 const LANE_ORDER = ["top", "bottom"];
 const LANE_LABELS = {
-  top: "upper",
-  bottom: "lower",
+  top: "上路",
+  bottom: "下路",
 };
 
 const TEAMS = {
   red: {
     id: "red",
-    name: "Red",
+    name: "红方",
     color: "#d75a55",
     soft: "#f3b1ab",
     baseColor: "rgba(215, 90, 85, 0.18)",
@@ -122,7 +122,7 @@ const TEAMS = {
   },
   blue: {
     id: "blue",
-    name: "Blue",
+    name: "蓝方",
     color: "#4b7ef1",
     soft: "#b0cafc",
     baseColor: "rgba(75, 126, 241, 0.18)",
@@ -392,7 +392,7 @@ class Game {
     this.nextUnitId = 1;
     this.nextProjectileId = 1;
     this.defaultMessage =
-      "Click a lane strip to deploy. First input also unlocks sound.";
+      "点击一路的部署栏即可出兵。首次操作也会同时开启声音。";
     this.bannerMessage = this.defaultMessage;
     this.bannerTimer = 0;
 
@@ -414,7 +414,7 @@ class Game {
 
       const title = document.createElement("div");
       title.className = "deployment-title";
-      title.textContent = lane === "top" ? "Upper" : "Lower";
+      title.textContent = lane === "top" ? "上路" : "下路";
 
       const buttons = document.createElement("div");
       buttons.className = "deploy-buttons";
@@ -428,7 +428,7 @@ class Game {
         button.dataset.lane = lane;
         button.innerHTML = `
           <span class="deploy-badge">${getUnitIconMarkup(typeId)}</span>
-          <div class="deploy-note">${type.cost}g</div>
+          <div class="deploy-note">${type.cost}金</div>
         `;
         button.addEventListener("click", () => {
           this.audio.unlock();
@@ -455,20 +455,20 @@ class Game {
       card.innerHTML = `
         <div class="unit-name">
           <strong><span class="unit-icon">${getUnitIconMarkup(typeId)}</span>${type.label}</strong>
-          <span>${type.cost} gold</span>
+          <span>${type.cost} 金币</span>
         </div>
         <div class="unit-meta">
-          <span>${type.maxHealth} hp</span>
-          <span>${type.cooldown.toFixed(1)}s cd</span>
+          <span>${type.maxHealth} 生命</span>
+          <span>${type.cooldown.toFixed(1)} 秒冷却</span>
         </div>
         <div class="unit-stats">
-          <span class="unit-chip">${type.damage} dmg</span>
-          <span class="unit-chip">${type.range <= 40 ? "melee" : `${type.range} range`}</span>
-          <span class="unit-chip">${type.attackInterval.toFixed(2)}s atk</span>
+          <span class="unit-chip">${type.damage} 伤害</span>
+          <span class="unit-chip">${type.range <= 40 ? "近战" : `${type.range} 射程`}</span>
+          <span class="unit-chip">${type.attackInterval.toFixed(2)} 秒攻速</span>
         </div>
         <div class="unit-role">${type.description}</div>
-        <div class="unit-matchup">Good: ${type.goodAgainst}</div>
-        <div class="unit-matchup">Risk: ${type.strugglesAgainst}</div>
+        <div class="unit-matchup">擅长：${type.goodAgainst}</div>
+        <div class="unit-matchup">劣势：${type.strugglesAgainst}</div>
       `;
       this.unitGuide.appendChild(card);
     }
@@ -975,14 +975,14 @@ class Game {
 
     if (team.unitCount >= UNIT_CAP) {
       if (!fromAI) {
-        this.setMessage("Unit cap reached: 20 on the field.", 1.8);
+        this.setMessage("已达单位上限：场上最多 20 个单位。", 1.8);
       }
       return false;
     }
 
     if (team.gold < type.cost) {
       if (!fromAI) {
-        this.setMessage(`Need ${type.cost} gold for ${type.label}.`, 1.6);
+        this.setMessage(`部署${type.label}需要 ${type.cost} 金币。`, 1.6);
       }
       return false;
     }
@@ -990,7 +990,7 @@ class Game {
     if (team.cooldowns[typeId] > 0) {
       if (!fromAI) {
         this.setMessage(
-          `${type.label} cooling down: ${team.cooldowns[typeId].toFixed(1)}s left.`,
+          `${type.label}冷却中：还剩 ${team.cooldowns[typeId].toFixed(1)} 秒。`,
           1.4,
         );
       }
@@ -1037,7 +1037,7 @@ class Game {
 
     if (!fromAI) {
       this.audio.play("spawn");
-      this.setMessage(`${type.label} deployed to the ${LANE_LABELS[lane]} route.`, 1.2);
+      this.setMessage(`${type.label}已部署到${LANE_LABELS[lane]}。`, 1.2);
     }
 
     return true;
@@ -1418,14 +1418,14 @@ class Game {
 
     this.phase = "ended";
     const playerWon = winnerTeamId === "blue";
-    this.overlayTitle.textContent = playerWon ? "Victory" : "Defeat";
+    this.overlayTitle.textContent = playerWon ? "胜利" : "战败";
     this.overlaySubtitle.textContent =
-      `Match time ${this.formatTime(this.timeElapsed)}. ` +
-      `Blue dealt ${Math.round(this.teams.blue.stats.damageDealt)} total damage and took ` +
-      `${Math.round(this.teams.blue.stats.damageTaken)}.`;
+      `对局时长 ${this.formatTime(this.timeElapsed)}。` +
+      `蓝方总计造成 ${Math.round(this.teams.blue.stats.damageDealt)} 点伤害，承受 ` +
+      `${Math.round(this.teams.blue.stats.damageTaken)} 点伤害。`;
     this.summaryGrid.innerHTML = this.renderSummaryCard("blue") + this.renderSummaryCard("red");
     this.overlay.classList.remove("hidden");
-    this.setMessage(playerWon ? "Enemy base destroyed." : "Your base has fallen.", 5);
+    this.setMessage(playerWon ? "敌方基地已被摧毁。" : "我方基地已被攻破。", 5);
     this.audio.play(playerWon ? "win" : "lose");
   }
 
@@ -1436,22 +1436,22 @@ class Game {
       const type = UNIT_TYPES[typeId];
       return `
         <div class="summary-line">
-          <span>${type.label}: built ${team.stats.spawned[typeId]}</span>
-          <span>lost ${team.stats.lost[typeId]}</span>
+          <span>${type.label}：部署 ${team.stats.spawned[typeId]}</span>
+          <span>阵亡 ${team.stats.lost[typeId]}</span>
         </div>
       `;
     }).join("");
 
     return `
       <div class="summary-card" style="border-color: ${withAlpha(color, 0.55)};">
-        <h3 style="color: ${color};">${TEAMS[teamId].name} Team</h3>
+        <h3 style="color: ${color};">${TEAMS[teamId].name}</h3>
         ${lines}
         <div class="summary-line">
-          <span>Total damage dealt</span>
+          <span>总输出伤害</span>
           <span>${Math.round(team.stats.damageDealt)}</span>
         </div>
         <div class="summary-line">
-          <span>Total damage taken</span>
+          <span>总承受伤害</span>
           <span>${Math.round(team.stats.damageTaken)}</span>
         </div>
       </div>
@@ -1464,30 +1464,30 @@ class Game {
     const laneStates = this.getLaneStates();
 
     this.redStatus.innerHTML = `
-      <h3 style="color: ${TEAMS.red.color};">Red Base (AI)</h3>
+      <h3 style="color: ${TEAMS.red.color};">红方基地（AI）</h3>
       <div class="hud-lines">
-        <div>Base HP: ${Math.max(0, Math.round(red.baseHp))} / ${BASE_MAX_HEALTH}</div>
-        <div>Fielded units: ${red.unitCount} / ${UNIT_CAP}</div>
-        <div>Economy: ${Math.floor(red.gold)} gold, +${GOLD_PER_SECOND}/s</div>
+        <div>基地生命：${Math.max(0, Math.round(red.baseHp))} / ${BASE_MAX_HEALTH}</div>
+        <div>场上单位：${red.unitCount} / ${UNIT_CAP}</div>
+        <div>经济：${Math.floor(red.gold)} 金币，+${GOLD_PER_SECOND}/秒</div>
       </div>
     `;
 
     this.centerStatus.innerHTML = `
       <div class="hud-lines">
-        <div><strong>${this.phase === "playing" ? "Battle live" : "Battle over"}</strong></div>
-        <div>Time: ${this.formatTime(this.timeElapsed)}</div>
-        <div>Enemy posture: ${AI_FOCUS_LABELS[red.brain.focus]}</div>
+        <div><strong>${this.phase === "playing" ? "战斗进行中" : "战斗结束"}</strong></div>
+        <div>时间：${this.formatTime(this.timeElapsed)}</div>
+        <div>敌方策略：${AI_FOCUS_LABELS[red.brain.focus]}</div>
         ${LANE_ORDER.map((lane) => `<div>${this.formatLanePressureLine(lane, laneStates[lane])}</div>`).join("")}
       </div>
     `;
 
     this.blueStatus.innerHTML = `
-      <h3 style="color: ${TEAMS.blue.color};">Blue Base (Player)</h3>
+      <h3 style="color: ${TEAMS.blue.color};">蓝方基地（玩家）</h3>
       <div class="hud-lines">
-        <div>Base HP: ${Math.max(0, Math.round(blue.baseHp))} / ${BASE_MAX_HEALTH}</div>
-        <div>Gold: ${Math.floor(blue.gold)}</div>
-        <div>Income: +${GOLD_PER_SECOND}/s</div>
-        <div>Fielded units: ${blue.unitCount} / ${UNIT_CAP}</div>
+        <div>基地生命：${Math.max(0, Math.round(blue.baseHp))} / ${BASE_MAX_HEALTH}</div>
+        <div>金币：${Math.floor(blue.gold)}</div>
+        <div>收入：+${GOLD_PER_SECOND}/秒</div>
+        <div>场上单位：${blue.unitCount} / ${UNIT_CAP}</div>
       </div>
     `;
 
@@ -1500,7 +1500,7 @@ class Game {
       const laneState = laneStates[lane];
       const laneStateName = this.getLaneStateName(laneState);
       group.dataset.state = laneStateName;
-      group.title = `${LANE_NAMES[lane]}: ${laneState.blue.total} vs ${laneState.red.total} · ${this.describeLaneStatusFromBlue(laneState)}`;
+      group.title = `${LANE_NAMES[lane]}：蓝方 ${laneState.blue.total} 对 红方 ${laneState.red.total} · ${this.describeLaneStatusFromBlue(laneState)}`;
 
       for (const typeId of UNIT_ORDER) {
         const button = this.deploymentButtons.get(`${lane}:${typeId}`);
@@ -1509,15 +1509,15 @@ class Game {
         const note = button.querySelector(".deploy-note");
         const available = this.canSpawn("blue", typeId);
 
-        note.textContent = cooldown > 0 ? `${cooldown.toFixed(1)}s` : `${type.cost}`;
+        note.textContent = cooldown > 0 ? `${cooldown.toFixed(1)}秒` : `${type.cost}金`;
         button.disabled = !available;
         button.classList.toggle("is-disabled", !available);
         button.setAttribute("aria-disabled", String(!available));
         button.title = cooldown > 0
-          ? `${type.label} cooling down: ${cooldown.toFixed(1)}s left`
+          ? `${type.label}冷却中：还剩 ${cooldown.toFixed(1)} 秒`
           : !available
-            ? `Need ${type.cost} gold or more field space`
-            : `Deploy ${type.label} to ${LANE_NAMES[lane]}`;
+            ? `需要 ${type.cost} 金币，或场上单位空位不足`
+            : `部署${type.label}到${LANE_NAMES[lane]}`;
       }
     }
   }
@@ -1536,20 +1536,20 @@ class Game {
   }
 
   formatLanePressureLine(lane, laneState) {
-    return `${LANE_NAMES[lane]}: Blue ${laneState.blue.total} vs Red ${laneState.red.total} · ${this.describeLaneStatusFromBlue(laneState)}`;
+    return `${LANE_NAMES[lane]}：蓝方 ${laneState.blue.total} 对 红方 ${laneState.red.total} · ${this.describeLaneStatusFromBlue(laneState)}`;
   }
 
   describeLaneStatusFromBlue(laneState) {
     const netPressure = laneState.bluePressure - laneState.redPressure;
     if (netPressure > 1.5) {
-      return "you are pushing";
+      return "我方推进中";
     }
 
     if (netPressure < -1.5) {
-      return "enemy pressure";
+      return "敌方施压中";
     }
 
-    return "contested";
+    return "拉锯中";
   }
 
   setMessage(message, duration) {
