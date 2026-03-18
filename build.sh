@@ -2,5 +2,5 @@
 
 mkdir dist
 cp ./index.html dist/
-cp ./game.js dist/
+cp ./*.js dist/
 cp ./styles.css dist/

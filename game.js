@@ -1,13 +1,13 @@
+import {
+  AI_FOCUS_LABELS,
+  chooseAIStrategyAction,
+  createInitialAIBrainState,
+} from "./strategy.js";
+
 const UNIT_ORDER = ["fighter", "archer", "shield", "giant"];
 const LANE_NAMES = {
   top: "上路",
   bottom: "下路",
-};
-const AI_FOCUS_LABELS = {
-  balanced: "均衡",
-  brace: "固守",
-  volley: "齐射",
-  power: "强攻",
 };
 
 const UNIT_TYPES = {
@@ -621,13 +621,7 @@ class Game {
       baseHp: BASE_MAX_HEALTH,
       cooldowns: Object.fromEntries(UNIT_ORDER.map((typeId) => [typeId, 0])),
       unitCount: 0,
-      brain: {
-        focus: "balanced",
-        reserveUnit: "shield",
-        focusUntil: 0,
-        lastChoice: null,
-        lastLane: null,
-      },
+      brain: createInitialAIBrainState(),
       stats: {
         spawned,
         lost,
@@ -702,10 +696,6 @@ class Game {
   }
 
   chooseAIAction() {
-    if (this.teams.red.unitCount >= UNIT_CAP) {
-      return null;
-    }
-
     const ai = this.teams.red;
     const player = this.teams.blue;
     const aiCounts = this.getUnitCounts("red");
@@ -713,201 +703,35 @@ class Game {
     const pressure = this.units.filter(
       (unit) => unit.teamId === "blue" && unit.x < 340 && unit.alive,
     ).length;
-    const aiBrain = ai.brain;
     const laneStates = this.getLaneStates();
+    const decision = chooseAIStrategyAction({
+      timeElapsed: this.timeElapsed,
+      unitCap: UNIT_CAP,
+      unitOrder: UNIT_ORDER,
+      laneOrder: LANE_ORDER,
+      unitTypes: UNIT_TYPES,
+      ai: {
+        gold: ai.gold,
+        unitCount: ai.unitCount,
+        cooldowns: ai.cooldowns,
+        baseHp: ai.baseHp,
+        brain: ai.brain,
+      },
+      player: {
+        gold: player.gold,
+        unitCount: player.unitCount,
+        cooldowns: player.cooldowns,
+        baseHp: player.baseHp,
+        brain: player.brain,
+      },
+      aiCounts,
+      playerCounts,
+      pressure,
+      laneStates,
+    });
 
-    this.refreshAIFocus(ai, aiCounts, playerCounts, pressure);
-    if (this.shouldAIHoldForReserve(ai, aiCounts, pressure)) {
-      return null;
-    }
-
-    let bestAction = null;
-    let bestScore = -Infinity;
-
-    for (const typeId of UNIT_ORDER) {
-      if (!this.canSpawn("red", typeId)) {
-        continue;
-      }
-
-      let score = this.getAITypeScore(typeId, {
-        ai,
-        player,
-        aiCounts,
-        playerCounts,
-        pressure,
-      });
-
-      if (aiBrain.reserveUnit === typeId) {
-        score += 1.35;
-      }
-
-      if (aiBrain.lastChoice === typeId) {
-        score -= 0.55;
-      }
-
-      for (const lane of LANE_ORDER) {
-        let laneScore = score + this.getAILaneScore(typeId, laneStates[lane], aiBrain);
-        if (aiBrain.lastLane === lane) {
-          laneScore -= 0.18;
-        }
-
-        laneScore += Math.random() * 0.5;
-        if (laneScore > bestScore) {
-          bestScore = laneScore;
-          bestAction = { typeId, lane };
-        }
-      }
-    }
-
-    aiBrain.lastChoice = bestAction ? bestAction.typeId : null;
-    aiBrain.lastLane = bestAction ? bestAction.lane : null;
-    return bestAction;
-  }
-
-  refreshAIFocus(ai, aiCounts, playerCounts, pressure) {
-    if (this.timeElapsed < ai.brain.focusUntil) {
-      return;
-    }
-
-    let focus = "balanced";
-    let reserveUnit = "shield";
-
-    if (pressure >= 4) {
-      focus = "brace";
-      reserveUnit = "shield";
-    } else if (this.timeElapsed > 42 && (aiCounts.giant === 0 || this.teams.blue.baseHp < 760)) {
-      focus = "power";
-      reserveUnit = "giant";
-    } else if (
-      playerCounts.archer >= 3 ||
-      (aiCounts.fighter + aiCounts.shield >= 3 && aiCounts.archer < 2)
-    ) {
-      focus = "volley";
-      reserveUnit = "archer";
-    } else {
-      const roll = Math.random();
-      if (roll < 0.22) {
-        focus = "balanced";
-        reserveUnit = "shield";
-      } else if (roll < 0.56) {
-        focus = "volley";
-        reserveUnit = "archer";
-      } else {
-        focus = "power";
-        reserveUnit = "giant";
-      }
-    }
-
-    ai.brain.focus = focus;
-    ai.brain.reserveUnit = reserveUnit;
-    ai.brain.focusUntil = this.timeElapsed + 7 + Math.random() * 4;
-  }
-
-  shouldAIHoldForReserve(ai, aiCounts, pressure) {
-    const reserveTypeId = ai.brain.reserveUnit;
-    if (!reserveTypeId) {
-      return false;
-    }
-
-    const reserveType = UNIT_TYPES[reserveTypeId];
-    const goldGap = reserveType.cost - ai.gold;
-    const frontline = aiCounts.fighter + aiCounts.shield;
-
-    if (goldGap <= 0) {
-      return false;
-    }
-
-    if (reserveTypeId === "giant") {
-      return goldGap <= 90 && frontline >= 2 && pressure <= 3;
-    }
-
-    if (reserveTypeId === "shield") {
-      return goldGap <= 34 && pressure >= 1;
-    }
-
-    if (reserveTypeId === "archer") {
-      return goldGap <= 28 && frontline >= 1;
-    }
-
-    return false;
-  }
-
-  getAITypeScore(typeId, context) {
-    const { ai, player, aiCounts, playerCounts, pressure } = context;
-    const frontline = aiCounts.fighter + aiCounts.shield;
-    const enemyFrontline = playerCounts.fighter + playerCounts.shield + playerCounts.giant;
-    const enemyArchers = playerCounts.archer;
-    const aiBrain = ai.brain;
-    let score = 0;
-
-    if (typeId === "fighter") {
-      score = 2.2 + Math.max(0, 3 - frontline) * 0.8;
-      score += Math.max(0, 4 - aiCounts.fighter) * 0.2;
-      score += pressure * 0.22;
-      score -= aiCounts.fighter * 0.26;
-      score -= this.timeElapsed > 45 ? 0.45 : 0;
-    }
-
-    if (typeId === "archer") {
-      score = 4.1 + Math.max(0, enemyFrontline - aiCounts.archer * 2) * 0.46;
-      score += Math.max(0, frontline - 1) * 0.36;
-      score += Math.max(0, playerCounts.giant - aiCounts.archer) * 0.55;
-      score += this.timeElapsed > 35 ? 0.4 : 0;
-    }
-
-    if (typeId === "shield") {
-      score = 4.4 + Math.max(0, enemyArchers - aiCounts.shield) * 0.88;
-      score += pressure * 0.75;
-      score += Math.max(0, playerCounts.giant - aiCounts.shield) * 0.62;
-      score -= aiCounts.shield * 0.08;
-    }
-
-    if (typeId === "giant") {
-      score = 3.0 + Math.max(0, this.timeElapsed - 35) * 0.024;
-      score += player.baseHp < 820 ? 1.35 : 0;
-      score += aiCounts.giant === 0 && this.timeElapsed > 40 ? 1.3 : 0;
-      score += frontline >= 2 ? 1.0 : -0.45;
-      score += ai.gold > 145 ? 1.15 : 0;
-      score -= aiCounts.giant * 0.95;
-    }
-
-    if (aiBrain.focus === "brace") {
-      if (typeId === "shield") {
-        score += 1.5;
-      }
-      if (typeId === "fighter") {
-        score += 0.9;
-      }
-      if (typeId === "giant") {
-        score -= 0.35;
-      }
-    }
-
-    if (aiBrain.focus === "volley") {
-      if (typeId === "archer") {
-        score += 1.9;
-      }
-      if (typeId === "shield") {
-        score += 0.75;
-      }
-      if (typeId === "fighter") {
-        score -= 0.4;
-      }
-    }
-
-    if (aiBrain.focus === "power") {
-      if (typeId === "giant") {
-        score += 2.45;
-      }
-      if (typeId === "shield") {
-        score += 0.8;
-      }
-      if (typeId === "fighter") {
-        score -= 0.7;
-      }
-    }
-
-    return score;
+    ai.brain = decision.brain;
+    return decision.action;
   }
 
   getUnitCounts(teamId) {
@@ -992,57 +816,6 @@ class Game {
     }
 
     return clamp(Math.abs(unit.x - spawnX) / totalDistance, 0, 1);
-  }
-
-  getAILaneScore(typeId, laneState, aiBrain) {
-    const defendingThreat = laneState.bluePressure;
-    const attackingThreat = laneState.redPressure;
-    const friendly = laneState.red;
-    const enemy = laneState.blue;
-    let score = 0;
-
-    if (typeId === "fighter") {
-      score += defendingThreat * 0.62;
-      score += Math.max(0, enemy.total - friendly.total) * 0.48;
-      score += Math.max(0, enemy.archer - friendly.frontline) * 0.7;
-      score += friendly.total === 0 ? 0.35 : 0;
-    }
-
-    if (typeId === "archer") {
-      score += friendly.frontline * 0.85;
-      score += Math.max(0, enemy.frontline - friendly.archer) * 0.42;
-      score += attackingThreat * 0.36;
-      score -= defendingThreat > attackingThreat + 1.4 ? 0.28 : 0;
-    }
-
-    if (typeId === "shield") {
-      score += defendingThreat * 0.96;
-      score += enemy.archer * 0.74;
-      score += Math.max(0, enemy.frontline - friendly.frontline) * 0.44;
-      score += friendly.shield === 0 ? 0.16 : 0;
-    }
-
-    if (typeId === "giant") {
-      score += attackingThreat * 0.94;
-      score += friendly.frontline * 0.82;
-      score += enemy.archer === 0 ? 0.62 : 0;
-      score -= enemy.archer * 0.54;
-      score -= friendly.total === 0 ? 0.52 : 0;
-    }
-
-    if (aiBrain.focus === "brace") {
-      score += defendingThreat * 0.25;
-    }
-
-    if (aiBrain.focus === "volley" && typeId === "archer") {
-      score += friendly.frontline * 0.22;
-    }
-
-    if (aiBrain.focus === "power" && typeId === "giant") {
-      score += attackingThreat * 0.24;
-    }
-
-    return score;
   }
 
   canSpawn(teamId, typeId) {
