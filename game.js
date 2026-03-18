@@ -1520,15 +1520,43 @@ class Game {
       `对局时长 ${this.formatTime(this.timeElapsed)}。` +
       `蓝方总计造成 ${Math.round(this.teams.blue.stats.damageDealt)} 点伤害，承受 ` +
       `${Math.round(this.teams.blue.stats.damageTaken)} 点伤害。`;
-    this.summaryGrid.innerHTML = this.renderSummaryCard("red") + this.renderSummaryCard("blue");
+    this.summaryGrid.innerHTML = this.renderSummaryCard();
     this.overlay.classList.remove("hidden");
     this.setMessage(playerWon ? "敌方基地已被摧毁。" : "我方基地已被攻破。", 5);
     this.audio.play(playerWon ? "win" : "lose");
   }
 
-  renderSummaryCard(teamId) {
-    const team = this.teams[teamId];
-    const color = pickColor(teamId);
+  computePlayerScore() {
+    const blue = this.teams.blue;
+    const netDamage = Math.round(blue.stats.damageDealt - blue.stats.damageTaken);
+    const goldLeft = Math.round(blue.gold);
+    const damageScore = Math.round(netDamage * 1.2);
+    const timePenalty = Math.round(this.timeElapsed * 5);
+    const goldScore = goldLeft * 2;
+    const total = Math.max(0, damageScore - timePenalty + goldScore);
+
+    return {
+      total,
+      netDamage,
+      goldLeft,
+      damageScore,
+      timePenalty,
+      goldScore,
+    };
+  }
+
+  formatSignedNumber(value) {
+    if (value > 0) {
+      return `+${value}`;
+    }
+
+    return `${value}`;
+  }
+
+  renderSummaryCard() {
+    const red = this.teams.red;
+    const blue = this.teams.blue;
+    const score = this.computePlayerScore();
     const lines = UNIT_ORDER.map((typeId) => {
       const type = UNIT_TYPES[typeId];
       return `
@@ -1536,29 +1564,48 @@ class Game {
           <span class="summary-unit" title="${type.label}" aria-label="${type.label}">
             ${getUnitIconMarkup(typeId)}
           </span>
-          <span class="summary-stat">
-            <span class="summary-stat-label">部署</span>
-            <strong class="summary-stat-value">${team.stats.spawned[typeId]}</strong>
-          </span>
-          <span class="summary-stat">
-            <span class="summary-stat-label">阵亡</span>
-            <strong class="summary-stat-value">${team.stats.lost[typeId]}</strong>
-          </span>
+          <strong class="summary-team-value summary-team-value-red">${red.stats.spawned[typeId]}</strong>
+          <strong class="summary-team-value summary-team-value-red">${red.stats.lost[typeId]}</strong>
+          <strong class="summary-team-value summary-team-value-blue">${blue.stats.spawned[typeId]}</strong>
+          <strong class="summary-team-value summary-team-value-blue">${blue.stats.lost[typeId]}</strong>
         </div>
       `;
     }).join("");
 
     return `
-      <div class="summary-card" style="border-color: ${withAlpha(color, 0.55)};">
-        <h3 style="color: ${color};">${TEAMS[teamId].name}</h3>
-        ${lines}
-        <div class="summary-line summary-line-total">
-          <span class="summary-total-label">总输出伤害</span>
-          <strong class="summary-total-value">${Math.round(team.stats.damageDealt)}</strong>
+      <div class="summary-card" style="border-color: ${withAlpha(pickColor("blue"), 0.28)};">
+        <div class="summary-scoreboard">
+          <div class="summary-score">
+            <span class="summary-score-label">评分</span>
+            <strong class="summary-score-value">${score.total}</strong>
+            <span class="summary-score-formula">
+              伤害得分 ${this.formatSignedNumber(score.damageScore)} · 耗时得分 -${score.timePenalty} · 经济得分 +${score.goldScore}
+            </span>
+          </div>
+          <div class="summary-kpis">
+            <div class="summary-kpi">
+              <span class="summary-kpi-label">净伤害</span>
+              <strong class="summary-kpi-value">${this.formatSignedNumber(score.netDamage)}</strong>
+            </div>
+            <div class="summary-kpi">
+              <span class="summary-kpi-label">剩余金币</span>
+              <strong class="summary-kpi-value">${score.goldLeft}</strong>
+            </div>
+            <div class="summary-kpi">
+              <span class="summary-kpi-label">对局时长</span>
+              <strong class="summary-kpi-value">${this.formatTime(this.timeElapsed)}</strong>
+            </div>
+          </div>
         </div>
-        <div class="summary-line summary-line-total">
-          <span class="summary-total-label">总承受伤害</span>
-          <strong class="summary-total-value">${Math.round(team.stats.damageTaken)}</strong>
+        <div class="summary-table-wrap">
+          <div class="summary-line summary-line-columns" aria-hidden="true">
+            <span></span>
+            <span class="summary-column-title summary-team-label-red">红方部署</span>
+            <span class="summary-column-title summary-team-label-red">红方阵亡</span>
+            <span class="summary-column-title summary-team-label-blue">蓝方部署</span>
+            <span class="summary-column-title summary-team-label-blue">蓝方阵亡</span>
+          </div>
+          ${lines}
         </div>
       </div>
     `;
